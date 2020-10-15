@@ -1,4 +1,4 @@
-function [] = CreateDllFileFromCpp(CppDir,Name,OsimSource,OsimBuild,DllPath,ExtFuncs,VSinstall,nInputDll)
+function [] = CreateDllFileFromCpp(CppDir,Name,OsimSource,OsimBuild,DllPath,ExtFuncs,VSinstall,nInputDll,varargin)
 %CreateDllFileFromCpp Runs the workflow described here
 %(https://github.com/antoinefalisse/opensim-core/tree/AD-recorder) to add
 % new external functions to your opensim installation
@@ -15,6 +15,10 @@ function [] = CreateDllFileFromCpp(CppDir,Name,OsimSource,OsimBuild,DllPath,ExtF
 %       (for inverse dynamics is this tyically ndof*3 [q qd qdd].
 %
 % authors: Maarten Afschrift (KU Leuven)
+Compiler = 'Visual Studio 14 2015 Win64';   % default compiler
+if ~isempty(varargin)
+    Compiler = varargin{1};
+end
 
 if ~exist(fullfile(DllPath,[Name '.dll']),'file')
     % path info
@@ -60,7 +64,7 @@ if ~exist(fullfile(DllPath,[Name '.dll']),'file')
     % Win64"
     disp('... running cmake to update opensim build');
     cd(OsimBuild);
-    TextCommand = ['cmake ' OsimSource ' -G "Visual Studio 14 2015 Win64"'];
+    TextCommand = ['cmake ' OsimSource ' -G "' Compiler '"'];
     system(TextCommand);
     
     % or run it automatically using devnenv
@@ -96,6 +100,8 @@ if ~exist(fullfile(DllPath,[Name '.dll']),'file')
     
     % First: create the cmake file
     fid = fopen(fullfile(CgenDir1,'CMakeLists.txt'),'wt');
+    fprintf( fid, '%s\n', 'cmake_minimum_required (VERSION 2.8)');
+    fprintf( fid, '%s\n', 'set (CMAKE_CXX_STANDARD 11)');
     fprintf( fid, '%s\n', ['set(TEST_TARGET ' Name ')']);
     fprintf( fid, '%s\n', 'project(${TEST_TARGET})');
     fprintf( fid, '%s\n', 'add_library(${TEST_TARGET} SHARED foo_jac.c)');
@@ -116,7 +122,7 @@ if ~exist(fullfile(DllPath,[Name '.dll']),'file')
     % Run cmake again
     disp('... running cmake to create project external function');
     cd(fullfile(ExtFuncs,Name,'build'));
-    TextCommand = ['cmake ' CgenDir1 ' -G "Visual Studio 14 2015 Win64"'];
+    TextCommand = ['cmake ' CgenDir1 ' -G "' Compiler '"'];
     system(TextCommand);
     
     

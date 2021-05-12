@@ -42,21 +42,34 @@ if ~exist(fullfile(DllPath,[Name '.dll']),'file')
     
     % add the project to the current cmakelist of the the external projects
     CmakeFile = fullfile(OsimSource,'OpenSim\External_Functions','CMakeLists.txt');
-    ListExtFunc = importdata(CmakeFile);
-    delete(CmakeFile);
-    fid = fopen(fullfile(OsimSource,'OpenSim\External_Functions','CMakeLists.txt'),'wt');
-    for i =1:length(ListExtFunc)-1
-        fprintf( fid, '%s\n', ListExtFunc{i});
-    end
-    % check if external function is not already in the list
-    if ~any(strcmp(['	add_subdirectory(' Name ')'],ListExtFunc))
-        fprintf( fid, '%s\n', ['	add_subdirectory(' Name ')']);
-    else
-        disp('External function was already included in the CmakeList');
-    end
-    fprintf(fid, '%s\n', ListExtFunc{end});
-    fclose(fid);
+%     ListExtFunc = importdata(CmakeFile);
+    tempCopy = fullfile(pwd,'CMakeListTempCopy.txt');
+    copyfile(CmakeFile,tempCopy);
+    delete(CmakeFile)
     
+    % write the cmakefile again
+    % open file for reading
+    fidr = fopen(tempCopy,'r') ;
+    % open file for writing
+    fidw = fopen(CmakeFile,'w') ;
+    % while end of file has not been reached
+    while ( ~feof(fidr) )
+        % read line from reading file
+        str = fgets(fidr) ;
+        % match line to regular expression to determine if replacement needed
+        match = regexp(str,'endif()', 'match' ) ;
+        % if line is to be added
+        if (~isempty(match))
+            % added line
+            CharAdded = ['	add_subdirectory(' Name ')'];
+            fprintf(fidw,'%s\n',convertCharsToStrings(CharAdded));
+        end
+        % write line to writing file
+        fwrite(fidw,str);
+    end    
+    fclose(fidr);
+    fclose(fidw);
+
     %% Add new project to opensim build
     % update visual studio project with cmake
     % go to folder where you want to build the projects
